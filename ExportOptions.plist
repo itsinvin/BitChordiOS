@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Development export only. Fill in YOUR Team ID before using the
+	     signed-ipa job in .github/workflows/ios.yml. This file alone
+	     does not sign anything, and it is not an App Store export:
+	     BitChord will not pass App Store review. -->
+	<key>method</key>
+	<string>development</string>
+	<key>teamID</key>
+	<string>YOUR_TEAM_ID</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.bitchord.ios</key>
+		<string>BitChordIOS Development</string>
+	</dict>
+	<key>compileBitcode</key>
+	<false/>
+</dict>
+</plist>
