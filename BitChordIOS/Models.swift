@@ -24,17 +24,17 @@ public struct Track: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
-public struct ArtistItem: Identifiable, Codable, Equatable {
+public struct ArtistItem: Identifiable, Codable, Equatable, Hashable {
     public var id: String; public var name: String; public var thumbnailURL: String?; public var subscriberText: String?
     public init(id: String, name: String, thumbnailURL: String? = nil, subscriberText: String? = nil) { self.id = id; self.name = name; self.thumbnailURL = thumbnailURL; self.subscriberText = subscriberText }
 }
 
-public struct AlbumItem: Identifiable, Codable, Equatable {
+public struct AlbumItem: Identifiable, Codable, Equatable, Hashable {
     public var id: String; public var title: String; public var artists: [String]; public var thumbnailURL: String?; public var year: String?
     public init(id: String, title: String, artists: [String] = [], thumbnailURL: String? = nil, year: String? = nil) { self.id = id; self.title = title; self.artists = artists; self.thumbnailURL = thumbnailURL; self.year = year }
 }
 
-public struct PlaylistItem: Identifiable, Codable, Equatable {
+public struct PlaylistItem: Identifiable, Codable, Equatable, Hashable {
     public var id: String; public var title: String; public var author: String?; public var thumbnailURL: String?; public var trackCount: Int?
     public init(id: String, title: String, author: String? = nil, thumbnailURL: String? = nil, trackCount: Int? = nil) { self.id = id; self.title = title; self.author = author; self.thumbnailURL = thumbnailURL; self.trackCount = trackCount }
 }
