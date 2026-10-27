@@ -1,0 +1,151 @@
+# BitChord iOS — GitHub Actions build
+#
+# What this does (no Apple Developer account, no signing secrets needed):
+#   1. Checks out the repo on a macOS GitHub runner (which has Xcode).
+#   2. Builds BitChordIOS for the iOS Simulator, unsigned — this is the
+#      compile check. A failed Swift compile fails the run.
+#   3. Archives for a generic iOS device, unsigned, and uploads the
+#      .xcarchive as a run artifact.
+#
+# What it does NOT do, and why:
+#   An unsigned .xcarchive cannot be installed on a real iPhone, and an
+#   installable .ipa needs a signing certificate + provisioning profile.
+#   GitHub's macOS runners cannot sign with *your* personal team on their
+#   own. See "Signed IPA (optional)" below for the route to a real .ipa.
+#
+# Usage:
+#   Push this folder as the root of a GitHub repo (so that
+#   BitChordIOS.xcodeproj is at the repo root), then open the repo's
+#   Actions tab. Runs trigger on pushes/PRs to main and manually.
+#   macOS runners are billed at 10x the Linux minute rate on GitHub's
+#   free plan, so keep an eye on usage.
+
+name: iOS Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (Simulator, unsigned)
+    runs-on: macos-26
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcrun swift --version
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -project BitChordIOS.xcodeproj \
+            -scheme BitChordIOS \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Archive for device (unsigned)
+        run: |
+          xcodebuild \
+            -project BitChordIOS.xcodeproj \
+            -scheme BitChordIOS \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -archivePath build/BitChordIOS.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+
+      - name: Upload unsigned archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitChordIOS-unsigned-xcarchive
+          path: build/BitChordIOS.xcarchive
+          retention-days: 7
+
+      # AltStore package: a device .app, zipped as an .ipa, with NO signing.
+      # AltStore re-signs it with your own (free) Apple ID when you install
+      # it, so this is the artifact AltStore users actually want. It is NOT
+      # installable directly — opening it outside AltStore will fail.
+      - name: Package unsigned IPA for AltStore
+        run: |
+          xcodebuild \
+            -project BitChordIOS.xcodeproj \
+            -scheme BitChordIOS \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+          mkdir -p Payload
+          cp -R "build/DerivedData/Build/Products/Release-iphoneos/BitChordIOS.app" Payload/
+          zip -r BitChordIOS-AltStore.ipa Payload
+
+      - name: Upload AltStore IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitChordIOS-AltStore-ipa
+          path: BitChordIOS-AltStore.ipa
+          retention-days: 7
+
+  # ------------------------------------------------------------------
+  # Signed IPA (optional — uncomment and configure before using)
+  #
+  # To get an .ipa you can sideload onto your own iPhone:
+  #   1. In Xcode on your Mac, sign the app once with your personal team
+  #      so Apple creates a development certificate + provisioning profile.
+  #   2. Export that certificate as a .p12 (Keychain Access) and add it as
+  #      a repo secret named APPLE_CERTIFICATE_P12 (base64), with its
+  #      password as APPLE_CERTIFICATE_PASSWORD, and the profile as
+  #      APPLE_PROVISIONING_PROFILE (base64).
+  #   3. Fill in your Team ID in ExportOptions.plist (teamID field).
+  #   4. Uncomment the job below. It imports the cert, installs the
+  #      profile, archives signed, exports with ExportOptions.plist,
+  #      and uploads the .ipa.
+  # This will NOT produce an App Store build: BitChord is an unofficial
+  # YouTube Music client and will not pass App Store review. A development
+  # .ipa installs via Xcode/AltStore/SideStore on devices registered to
+  # that personal team only.
+  #
+  # signed-ipa:
+  #   name: Signed IPA (development)
+  #   runs-on: macos-26
+  #   if: github.event_name == 'workflow_dispatch'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Import signing certificate
+  #       uses: apple-actions/import-codesign-certs@v3
+  #       with:
+  #         p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+  #         p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+  #     - name: Install provisioning profile
+  #       run: |
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/BitChordIOS.mobileprovision
+  #     - name: Archive (signed)
+  #       run: |
+  #         xcodebuild -project BitChordIOS.xcodeproj -scheme BitChordIOS \
+  #           -destination 'generic/platform=iOS' -configuration Release \
+  #           -archivePath build/BitChordIOS.xcarchive archive
+  #     - name: Export IPA
+  #       run: |
+  #         xcodebuild -exportArchive -archivePath build/BitChordIOS.xcarchive \
+  #           -exportPath build/ipa -exportOptionsPlist ExportOptions.plist
+  #     - name: Upload IPA
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: BitChordIOS-ipa
+  #         path: build/ipa/*.ipa
+  #         retention-days: 7
