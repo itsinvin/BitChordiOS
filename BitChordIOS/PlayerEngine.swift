@@ -229,19 +229,19 @@ public final class PlayerEngine: ObservableObject {
         }
     }
     private func fadeStep() {
-        guard let fadePlayer, let targetIndex = fadeTargetIndex else { cancelCrossfade(restoreVolume: true); return }
+        guard let incomingPlayer = fadePlayer, let targetIndex = fadeTargetIndex else { cancelCrossfade(restoreVolume: true); return }
         fadeElapsed += 0.1
         let t = min(1, fadeElapsed / max(0.1, fadeOverlap))
         let gains = automixEnabled ? Automix.gains(at: t) : (outgoing: 1 - t, incoming: t)
         player.volume = Float(gains.outgoing)
-        fadePlayer.volume = Float(gains.incoming)
+        incomingPlayer.volume = Float(gains.incoming)
         if t >= 1 {
             fadeTimer?.invalidate(); fadeTimer = nil
             let oldTrack = currentTrack
             if let oldTrack { recordHistory(track: oldTrack, played: oldTrack.durationSeconds) }
             if let oldTrack, !playedHistory.contains(oldTrack) { playedHistory.append(oldTrack) }
             let oldPlayer = player
-            player = fadePlayer; fadePlayer = nil; fadeTargetIndex = nil; crossfadeSourceId = nil
+            player = incomingPlayer; fadePlayer = nil; fadeTargetIndex = nil; crossfadeSourceId = nil
             oldPlayer.pause()
             currentIndex = targetIndex
             player.volume = 1
