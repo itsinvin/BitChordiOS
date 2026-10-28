@@ -123,13 +123,14 @@ public final class JioSaavnSource: SourceSearching {
         guard let data = Data(base64Encoded: encrypted) else { return "" }
         var out = Data(count: data.count + kCCBlockSizeDES)
         var outLength = 0
+        let outCapacity = out.count
         let key = "38346591".data(using: .utf8)!
         let status = key.withUnsafeBytes { keyPtr in
             data.withUnsafeBytes { dataPtr in
                 out.withUnsafeMutableBytes { outPtr in
                     CCCrypt(CCOperation(kCCDecrypt), CCAlgorithm(kCCAlgorithmDES), CCOptions(kCCOptionPKCS7Padding),
                             keyPtr.baseAddress, kCCKeySizeDES, nil,
-                            dataPtr.baseAddress, data.count, outPtr.baseAddress, out.count, &outLength)
+                            dataPtr.baseAddress, data.count, outPtr.baseAddress, outCapacity, &outLength)
                 }
             }
         }
