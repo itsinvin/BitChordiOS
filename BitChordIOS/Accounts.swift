@@ -177,7 +177,7 @@ public enum Scrobbler {
         guard lastfmEnabled, !lastfmKey.isEmpty, lastfmSession != nil else { return }
         var req = URLRequest(url: URL(string: "https://ws.audioscrobbler.com/2.0/")!)
         req.httpMethod = "POST"; req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        var comps = URLComponents(); comps.queryItems = lastfmSigned(params).map { URLQueryItem(name: $0.key, value: $0.value) }
+        var comps = URLComponents(); comps.queryItems = lastfmSigned(params: params).map { URLQueryItem(name: $0.key, value: $0.value) }
         req.httpBody = comps.percentEncodedQuery?.data(using: .utf8)
         _ = try? await URLSession.shared.data(for: req)
     }
