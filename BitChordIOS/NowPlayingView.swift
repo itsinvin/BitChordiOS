@@ -94,13 +94,13 @@ public struct NowPlayingView: View {
                         }
                     }
                     HStack(spacing: 28) {
-                        Button { player.shuffleEnabled.toggle() } label: { Image(systemName: "shuffle").foregroundStyle(player.shuffleEnabled ? .blue : .primary) }
+                        Button { player.shuffleEnabled.toggle() } label: { Image(systemName: "shuffle").foregroundStyle(player.shuffleEnabled ? Color.blue : Color.primary) }
                         Button { player.previous() } label: { Image(systemName: "backward.fill").font(.title2) }
                         Button { player.togglePlayPause() } label: { Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill").font(.system(size: 56)) }
                         Button { player.next() } label: { Image(systemName: "forward.fill").font(.title2) }
                         Button {
                             player.repeatMode = player.repeatMode == .off ? .all : (player.repeatMode == .all ? .one : .off)
-                        } label: { Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat").foregroundStyle(player.repeatMode == .off ? .primary : .blue) }
+                        } label: { Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat").foregroundStyle(player.repeatMode == .off ? Color.primary : Color.blue) }
                     }
                     HStack(spacing: 16) {
                         Menu("Speed \(player.playbackSpeed, specifier: "%.2g")×") {
