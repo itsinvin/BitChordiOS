@@ -114,7 +114,7 @@ private final class TapContext {
     }
 }
 
-private func tapInit(_ tap: MTAudioProcessingTap, _ clientInfo: UnsafeMutableRawPointer, _ tapStorageOut: UnsafeMutablePointer<UnsafeMutableRawPointer?>) {
+private func tapInit(_ tap: MTAudioProcessingTap, _ clientInfo: UnsafeMutableRawPointer?, _ tapStorageOut: UnsafeMutablePointer<UnsafeMutableRawPointer?>) {
     // clientInfo is the +1 retained TapContext from audioMix(); hand that
     // same pointer to the tap as its storage, and release it in finalize.
     tapStorageOut.pointee = clientInfo
@@ -133,7 +133,7 @@ private func tapProcess(_ tap: MTAudioProcessingTap, _ numberFrames: CMItemCount
     let storage = MTAudioProcessingTapGetStorage(tap)
     let ctx = Unmanaged<TapContext>.fromOpaque(storage).takeUnretainedValue()
     var timeRange = CMTimeRange()
-    let status = MTAudioProcessingTapGetSourceAudio(tap, numberFrames, bufferListInOut, flagsOut, nil, &timeRange)
+    let status = MTAudioProcessingTapGetSourceAudio(tap, numberFrames, bufferListInOut, flagsOut, &timeRange, numberFramesOut)
     guard status == noErr else { numberFramesOut.pointee = 0; return }
     numberFramesOut.pointee = numberFrames
     let abl = UnsafeMutableAudioBufferListPointer(bufferListInOut)
@@ -179,11 +179,12 @@ public enum EqualizerTap {
         guard force || bands.contains(where: { abs($0) >= 0.01 }) || balance != 0 else { return nil }
         let ctx = TapContext(bands: bands); ctx.balance = balance
         var callbacks = MTAudioProcessingTapCallbacks(version: kMTAudioProcessingTapCallbacksVersion_0, clientInfo: Unmanaged.passRetained(ctx).toOpaque(), init: tapInit, finalize: tapFinalize, prepare: tapPrepare, unprepare: tapUnprepare, process: tapProcess)
-        var tap: Unmanaged<MTAudioProcessingTap>?
+        var tap: MTAudioProcessingTap?
         let status = MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PreEffects, &tap)
         guard status == noErr, let tap else { return nil }
-        let params = AVMutableAudioMixInputParameters(trackID: kCMPersistentTrackID_Invalid)
-        params.audioTapProcessor = tap.takeRetainedValue()
+        let params = AVMutableAudioMixInputParameters()
+        params.trackID = kCMPersistentTrackID_Invalid
+        params.audioTapProcessor = tap
         let mix = AVMutableAudioMix(); mix.inputParameters = [params]
         return mix
     }
